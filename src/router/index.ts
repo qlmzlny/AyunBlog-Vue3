@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import MainLayout from '../layouts/MainLayout.vue'
+import { useUserStore } from '@/stores/user'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -82,7 +83,8 @@ router.beforeEach((to, from, next) => {
   }
 
   // Auth guard
-  const isLoggedIn = true // Mocked
+  const userStore = useUserStore()
+  const isLoggedIn = !!userStore.token
   if (to.meta.requiresAuth && !isLoggedIn) {
     next('/login')
   } else {

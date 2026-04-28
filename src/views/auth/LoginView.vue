@@ -40,6 +40,27 @@
         </el-form-item>
 
         <template v-if="!isLogin">
+          <el-form-item label="验证码" prop="code">
+            <div class="code-input">
+              <el-input v-model="authForm.code" placeholder="请输入 6 位验证码">
+                <template #prefix>
+                  <el-icon><ChatLineRound /></el-icon>
+                </template>
+              </el-input>
+              <el-button
+                type="primary"
+                plain
+                :disabled="countdown > 0"
+                @click="handleSendCode"
+                :loading="sendCodeLoading"
+              >
+                {{ countdown > 0 ? `${countdown}s 后重新发送` : '发送验证码' }}
+              </el-button>
+            </div>
+          </el-form-item>
+        </template>
+
+        <template v-if="!isLogin">
           <el-form-item label="确认密码" prop="confirmPassword">
             <el-input
               v-model="authForm.confirmPassword"
@@ -75,23 +96,30 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import type { FormInstance } from 'element-plus'
+import { User, Message, Lock, IceTea, ChatLineRound } from '@element-plus/icons-vue'
+import { sendCode, register, login as loginApi } from '@/api/auth'
+import { useUserStore } from '@/stores/user'
 
 const router = useRouter()
 const route = useRoute()
+const userStore = useUserStore()
 const loading = ref(false)
+const sendCodeLoading = ref(false)
+const countdown = ref(0)
 const authFormRef = ref<FormInstance>()
 
 const isLogin = computed(() => route.name === 'Login')
 
 const authForm = reactive({
   username: '',
-  email: '',
+  email: '2144431549@qq.com',
   password: '',
   confirmPassword: '',
+  code: '',
   remember: false,
 })
 
@@ -119,20 +147,73 @@ const rules = {
     { min: 6, message: '密码长度不能少于 6 位', trigger: 'blur' },
   ],
   confirmPassword: [{ validator: validatePass2, trigger: 'blur' }],
+  code: [
+    { required: true, message: '请输入验证码', trigger: 'blur' },
+    { len: 6, message: '验证码长度为 6 位', trigger: 'blur' },
+  ],
+}
+
+const handleSendCode = async () => {
+  if (!authForm.email) {
+    ElMessage.warning('请先输入邮箱地址')
+    return
+  }
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(authForm.email)) {
+    ElMessage.warning('请输入正确的邮箱格式')
+    return
+  }
+
+  try {
+    sendCodeLoading.value = true
+    await sendCode(authForm.email)
+    ElMessage.success('验证码已发送，请注意查收')
+    countdown.value = 60
+    const timer = setInterval(() => {
+      countdown.value--
+      if (countdown.value <= 0) {
+        clearInterval(timer)
+      }
+    }, 1000)
+  } catch (error) {
+    // Error handled by interceptor
+  } finally {
+    sendCodeLoading.value = false
+  }
 }
 
 const handleSubmit = async () => {
   if (!authFormRef.value) return
 
-  await authFormRef.value.validate((valid) => {
+  await authFormRef.value.validate(async (valid) => {
     if (valid) {
       loading.value = true
-      // Mock API call
-      setTimeout(() => {
-        loading.value = false
-        ElMessage.success(isLogin.value ? '登录成功' : '注册成功')
+      try {
+        if (isLogin.value) {
+          const res = await loginApi({
+            email: authForm.email,
+            password: authForm.password,
+          })
+          userStore.setToken(res.data.token)
+          userStore.setUserInfo(res.data.user)
+          ElMessage.success('登录成功')
+        } else {
+          await register({
+            email: authForm.email,
+            username: authForm.username,
+            password: authForm.password,
+            code: authForm.code,
+          })
+          ElMessage.success('注册成功，请登录')
+          router.push('/login')
+          return
+        }
         router.push('/')
-      }, 1000)
+      } catch (error) {
+        // Error handled by interceptor
+      } finally {
+        loading.value = false
+      }
     }
   })
 }
@@ -192,6 +273,19 @@ const toggleMode = () => {
     justify-content: space-between;
     align-items: center;
     margin-bottom: $spacing-lg;
+  }
+
+  .code-input {
+    display: flex;
+    gap: $spacing-md;
+
+    .el-input {
+      flex: 1;
+    }
+
+    .el-button {
+      width: 120px;
+    }
   }
 
   .submit-btn {

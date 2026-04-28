@@ -3,8 +3,8 @@
     <el-header class="header">
       <div class="header-content">
         <div class="logo" @click="$router.push('/')">
-          <el-icon class="logo-icon"><IceTea /></el-icon>
-          <span class="logo-text">AyunBlog</span>
+          <el-icon class="logo-icon"><Cloudy /></el-icon>
+          <span class="logo-text">CloudLog</span>
         </div>
 
         <nav class="nav">
@@ -88,14 +88,20 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useUserStore } from '@/stores/user'
+import { ElMessage } from 'element-plus'
 
 const router = useRouter()
+const userStore = useUserStore()
+
 const searchQuery = ref('')
-const isLoggedIn = ref(true) // Mock for now
-const isAdmin = ref(true) // Mock for now
-const userAvatar = ref('https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png')
+const isLoggedIn = computed(() => !!userStore.token)
+const isAdmin = computed(() => userStore.userInfo?.role === 'blogger')
+const userAvatar = computed(
+  () => 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png',
+)
 
 const handleSearch = () => {
   if (searchQuery.value.trim()) {
@@ -112,7 +118,8 @@ const handleWriteCommand = (command: string) => {
 }
 
 const handleLogout = () => {
-  isLoggedIn.value = false
+  userStore.logout()
+  ElMessage.success('已退出登录')
   router.push('/')
 }
 </script>

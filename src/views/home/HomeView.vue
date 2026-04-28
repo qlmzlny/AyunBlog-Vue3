@@ -92,7 +92,7 @@
                   :size="64"
                   src="https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png"
                 />
-                <h3>Ayun</h3>
+                <h3>{{ userStore.userInfo?.username || 'Ayun' }}</h3>
                 <p>Full-stack Developer & Blogger</p>
               </div>
               <div class="profile-stats">
@@ -177,13 +177,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useUserStore } from '@/stores/user'
 
 const router = useRouter()
 const route = useRoute()
+const userStore = useUserStore()
+
 const currentPage = ref(1)
-const isLoggedIn = ref(false)
+const isLoggedIn = computed(() => !!userStore.token)
 const sortBy = ref('latest')
 
 const filterInfo = computed(() => {

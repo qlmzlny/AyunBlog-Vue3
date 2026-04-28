@@ -1,3 +1,4 @@
+@use "sass:color";
 @use "./variables.scss" as *;
 
 body {
@@ -16,7 +17,7 @@ a {
   transition: color 0.3s;
 
   &:hover {
-    color: mix($white, $primary-color, 20%);
+    color: color.mix($white, $primary-color, 20%);
   }
 }
 
