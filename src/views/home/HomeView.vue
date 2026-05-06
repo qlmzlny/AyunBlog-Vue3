@@ -3,13 +3,13 @@
     <el-row :gutter="24">
       <!-- Main Content -->
       <el-col :xs="24" :sm="24" :md="17">
-        <div class="article-list">
+        <div v-loading="loading" class="article-list">
           <!-- Filter Header -->
           <div v-if="filterInfo" class="filter-header">
             <div class="filter-text">
               <span class="filter-label">{{ filterInfo.type }}：</span>
               <span class="filter-value">{{ filterInfo.value }}</span>
-              <span class="result-count">共找到 {{ filteredArticles.length }} 篇相关文章</span>
+              <span class="result-count">共找到 {{ total }} 篇相关文章</span>
             </div>
             <div class="filter-actions">
               <el-select
@@ -27,51 +27,18 @@
             </div>
           </div>
 
-          <div v-if="filteredArticles.length > 0">
-            <div
-              v-for="article in filteredArticles"
-              :key="article.id"
-              class="article-card"
-              @click="goToDetail(article.id)"
-            >
-              <div class="article-info">
-                <h2 class="article-title">{{ article.title }}</h2>
-                <p class="article-excerpt">{{ article.excerpt }}</p>
-                <div class="article-meta">
-                  <span class="meta-item">
-                    <el-icon><Calendar /></el-icon> {{ article.date }}
-                  </span>
-                  <span class="meta-item">
-                    <el-icon><User /></el-icon> {{ article.author }}
-                  </span>
-                  <span class="meta-item">
-                    <el-icon><Folder /></el-icon> {{ article.category }}
-                  </span>
-                  <div class="tags">
-                    <el-tag
-                      v-for="tag in article.tags"
-                      :key="tag"
-                      size="small"
-                      effect="plain"
-                      class="tag"
-                    >
-                      {{ tag }}
-                    </el-tag>
-                  </div>
-                </div>
-              </div>
-              <div v-if="article.cover" class="article-cover">
-                <el-image :src="article.cover" fit="cover" />
-              </div>
-            </div>
+          <div v-if="articles.length > 0">
+            <ArticleCard v-for="article in articles" :key="article.id" :article="article" />
 
             <div class="pagination">
               <el-pagination
                 v-model:current-page="currentPage"
-                :page-size="10"
-                layout="prev, pager, next"
-                :total="50"
+                v-model:page-size="pageSize"
+                :page-sizes="[5, 10, 15, 20]"
+                layout="total, sizes, prev, pager, next"
+                :total="total"
                 @current-change="handlePageChange"
+                @size-change="handlePageSizeChange"
               />
             </div>
           </div>
@@ -177,15 +144,22 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
+import { getArticles } from '@/api/article'
+import type { Article } from '@/api/types/article'
+import ArticleCard from '@/components/ArticleCard.vue'
 
 const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
 
 const currentPage = ref(1)
+const pageSize = ref(5)
+const total = ref(0)
+const articles = ref<Article[]>([])
+const loading = ref(false)
 const isLoggedIn = computed(() => !!userStore.token)
 const sortBy = ref('latest')
 
@@ -200,69 +174,36 @@ const clearFilter = () => {
   router.push({ name: 'Home' })
 }
 
-const articles = ref([
-  {
-    id: 1,
-    title: '如何使用 Vue 3 + TypeScript 构建企业级博客',
-    excerpt:
-      '在这篇文章中，我们将探讨如何利用 Vue 3 的 Composition API 和 TypeScript 的强大类型系统来构建一个可维护、高性能的博客系统...',
-    date: '2026-04-20',
-    author: 'Ayun',
-    category: 'Vue',
-    views: 1254,
-    tags: ['Vue3', 'TypeScript'],
-    cover: 'https://picsum.photos/seed/vue/400/250',
-  },
-  {
-    id: 2,
-    title: '深度解析 Vite 的插件机制',
-    excerpt:
-      'Vite 的极速体验离不开其创新的插件机制。本文将带你深入源码，理解 Vite 是如何处理各种模块的...',
-    date: '2026-04-18',
-    author: 'Ayun',
-    category: '前端工具',
-    views: 856,
-    tags: ['Vite', '构建工具'],
-    cover: 'https://picsum.photos/seed/vite/400/250',
-  },
-  {
-    id: 3,
-    title: '2026 年前端开发趋势展望',
-    excerpt: '从 AI 驱动的编程到 WebAssembly 的普及，前端开发正在经历一场前所未有的变革...',
-    date: '2026-04-15',
-    author: 'Ayun',
-    category: '行业趋势',
-    views: 2341,
-    tags: ['AI', 'Wasm'],
-    cover: 'https://picsum.photos/seed/future/400/250',
-  },
-])
-
-const filteredArticles = computed(() => {
-  let result = [...articles.value]
-
-  // Apply filtering
-  if (route.query.q) {
-    const q = (route.query.q as string).toLowerCase()
-    result = result.filter(
-      (a) => a.title.toLowerCase().includes(q) || a.excerpt.toLowerCase().includes(q),
-    )
-  } else if (route.query.category) {
-    result = result.filter((a) => a.category === route.query.category)
-  } else if (route.query.tag) {
-    result = result.filter((a) => a.tags.includes(route.query.tag as string))
+const fetchArticles = async () => {
+  loading.value = true
+  try {
+    const params: any = {
+      page: currentPage.value,
+      pageSize: pageSize.value,
+      keyword: route.query.q as string,
+      categoryId: route.query.categoryId,
+      tagId: route.query.tagId,
+    }
+    const { data } = await getArticles(params)
+    articles.value = data.list
+    total.value = data.total
+  } catch (error) {
+    console.error('Failed to fetch articles:', error)
+  } finally {
+    loading.value = false
   }
+}
 
-  // Apply sorting
-  if (sortBy.value === 'views') {
-    result.sort((a, b: any) => b.views - a.views)
-  } else {
-    // latest by default (mock date sorting)
-    result.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-  }
-
-  return result
+onMounted(() => {
+  fetchArticles()
 })
+
+watch(
+  () => [route.query, currentPage.value],
+  () => {
+    fetchArticles()
+  },
+)
 
 const popularArticles = ref([
   { id: 1, title: '2026 年前端开发趋势展望' },
@@ -277,7 +218,13 @@ const goToDetail = (id: number) => {
 }
 
 const handlePageChange = (page: number) => {
-  console.log('Page changed to:', page)
+  currentPage.value = page
+}
+
+const handlePageSizeChange = (size: number) => {
+  pageSize.value = size
+  currentPage.value = 1
+  fetchArticles()
 }
 </script>
 
@@ -341,88 +288,15 @@ const handlePageChange = (page: number) => {
 .article-card {
   background-color: $white;
   border-radius: $border-radius-large;
-  padding: $spacing-lg;
+  padding: $spacing-xs;
   margin-bottom: $spacing-md;
   display: flex;
-  gap: $spacing-lg;
+  gap: $spacing-xs;
   cursor: pointer;
   transition:
     transform 0.3s,
     box-shadow 0.3s;
   border: 1px solid $border-color;
-
-  &:hover {
-    transform: translateY(-4px);
-    box-shadow: $box-shadow;
-    border-color: rgba($primary-color, 0.2);
-
-    .article-title {
-      color: $primary-color;
-    }
-  }
-
-  .article-info {
-    flex: 1;
-
-    .article-title {
-      margin: 0 0 $spacing-sm;
-      font-size: 22px;
-      font-weight: 700;
-      line-height: 1.4;
-      color: $text-primary;
-      transition: color 0.3s;
-    }
-
-    .article-excerpt {
-      color: $text-regular;
-      font-size: 15px;
-      line-height: 1.6;
-      margin-bottom: $spacing-md;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-    }
-
-    .article-meta {
-      display: flex;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: $spacing-md;
-      font-size: 13px;
-      color: $text-secondary;
-
-      .meta-item {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-      }
-
-      .tags {
-        display: flex;
-        gap: $spacing-sm;
-        margin-left: auto;
-      }
-    }
-  }
-
-  .article-cover {
-    width: 200px;
-    height: 125px;
-    border-radius: $border-radius-base;
-    overflow: hidden;
-    flex-shrink: 0;
-
-    .el-image {
-      width: 100%;
-      height: 100%;
-      transition: transform 0.5s;
-    }
-  }
-
-  &:hover .article-cover .el-image {
-    transform: scale(1.1);
-  }
 }
 
 .sidebar {

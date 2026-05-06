@@ -77,9 +77,9 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   // Set page title
   if (to.meta.title) {
-    document.title = `${to.meta.title} - AyunBlog`
+    document.title = `${to.meta.title} - CloudLog`
   } else {
-    document.title = 'AyunBlog'
+    document.title = 'CloudLog'
   }
 
   // Auth guard

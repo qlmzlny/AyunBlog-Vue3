@@ -4,7 +4,7 @@
       <el-col :xs="24" :md="8">
         <el-card class="profile-card" shadow="never">
           <div class="user-info">
-            <el-avatar :size="100" :src="user.avatar" />
+            <AvatarUpload v-model="user.avatar" :size="100" @success="handleAvatarSuccess" />
             <h2 class="username">{{ user.username }}</h2>
             <p class="email">{{ user.email }}</p>
             <p class="bio">{{ user.bio || '这个博主很懒，什么都没写~' }}</p>
@@ -33,7 +33,9 @@
             <div class="article-list">
               <div v-for="article in myArticles" :key="article.id" class="my-article-item">
                 <div class="article-main">
-                  <h3 class="article-title" @click="$router.push(`/article/${article.id}`)">{{ article.title }}</h3>
+                  <h3 class="article-title" @click="$router.push(`/article/${article.id}`)">
+                    {{ article.title }}
+                  </h3>
                   <div class="article-meta">
                     <span>{{ article.date }}</span>
                     <el-divider direction="vertical" />
@@ -79,84 +81,186 @@
     </el-row>
 
     <!-- Edit Profile Dialog -->
-    <el-dialog v-model="editVisible" title="编辑资料" width="500px">
-      <el-form :model="editForm" label-width="80px">
-        <el-form-item label="头像">
-          <el-upload
-            class="avatar-uploader"
-            action="#"
-            :show-file-list="false"
-          >
-            <img v-if="editForm.avatar" :src="editForm.avatar" class="avatar-preview" />
-            <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
-          </el-upload>
-        </el-form-item>
-        <el-form-item label="用户名">
-          <el-input v-model="editForm.username" />
-        </el-form-item>
-        <el-form-item label="个人简介">
-          <el-input v-model="editForm.bio" type="textarea" />
-        </el-form-item>
-      </el-form>
+    <el-dialog
+      v-model="editVisible"
+      title="编辑资料"
+      width="500px"
+      custom-class="edit-profile-dialog"
+    >
+      <div class="edit-profile-content">
+        <!-- 顶部/侧边头像区 -->
+        <div class="avatar-edit-section">
+          <AvatarUpload
+            v-model="editForm.avatar"
+            :size="100"
+            show-btn
+            @success="handleAvatarSuccess"
+          />
+        </div>
+
+        <!-- 下方表单区 -->
+        <el-form
+          :model="editForm"
+          :rules="rules"
+          ref="formRef"
+          label-position="top"
+          class="edit-form"
+        >
+          <el-form-item label="用户名" prop="username">
+            <el-input v-model="editForm.username" placeholder="请输入用户名" />
+          </el-form-item>
+          <el-form-item label="个人简介" prop="bio">
+            <el-input
+              v-model="editForm.bio"
+              type="textarea"
+              :rows="3"
+              placeholder="介绍一下你自己吧"
+            />
+          </el-form-item>
+        </el-form>
+      </div>
       <template #footer>
-        <el-button @click="editVisible = false">取消</el-button>
-        <el-button type="primary" @click="saveProfile">确定</el-button>
+        <div class="dialog-footer">
+          <el-button @click="editVisible = false">取消</el-button>
+          <el-button type="primary" :loading="saving" @click="saveProfile">保存修改</el-button>
+        </div>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue';
-import { ElMessage, ElMessageBox } from 'element-plus';
+import { ref, reactive, onMounted } from 'vue'
+import { ElMessage, ElMessageBox, type FormInstance } from 'element-plus'
+import AvatarUpload from '@/components/AvatarUpload.vue'
+import { getUserProfile, updateUserProfile, type UserProfile } from '@/api/user'
 
-const user = reactive({
-  username: 'Ayun',
-  email: 'ayun@example.com',
-  avatar: 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png',
-  bio: 'Full-stack Developer & Blogger'
-});
+const user = reactive<UserProfile>({
+  username: '',
+  email: '',
+  avatar: '',
+  bio: '',
+})
 
-const activeTab = ref('articles');
-const editVisible = ref(false);
+const activeTab = ref('articles')
+const editVisible = ref(false)
+const saving = ref(false)
+const formRef = ref<FormInstance>()
+
+// 表单校验规则
+const rules = {
+  username: [
+    { required: true, message: '请输入用户名', trigger: 'blur' },
+    { min: 2, max: 20, message: '长度在 2 到 20 个字符', trigger: 'blur' },
+  ],
+  bio: [{ max: 100, message: '长度不能超过 100 个字符', trigger: 'blur' }],
+}
 
 const myArticles = ref([
-  { id: 1, title: '如何使用 Vue 3 + TypeScript 构建企业级博客', date: '2026-04-20', category: 'Vue', views: 1254 },
-  { id: 2, title: '深度解析 Vite 的插件机制', date: '2026-04-18', category: '前端工具', views: 856 },
-  { id: 3, title: '2026 年前端开发趋势展望', date: '2026-04-15', category: '行业趋势', views: 2341 }
-]);
+  {
+    id: 1,
+    title: '如何使用 Vue 3 + TypeScript 构建企业级博客',
+    date: '2026-04-20',
+    category: 'Vue',
+    views: 1254,
+  },
+  {
+    id: 2,
+    title: '深度解析 Vite 的插件机制',
+    date: '2026-04-18',
+    category: '前端工具',
+    views: 856,
+  },
+  {
+    id: 3,
+    title: '2026 年前端开发趋势展望',
+    date: '2026-04-15',
+    category: '行业趋势',
+    views: 2341,
+  },
+])
 
-const editForm = reactive({ ...user });
-const settingsForm = reactive({ ...user });
+const editForm = reactive<UserProfile>({
+  username: '',
+  avatar: '',
+  bio: '',
+})
+const settingsForm = reactive({ ...user })
+
+// 初始化加载数据
+const fetchProfile = async () => {
+  try {
+    const res = await getUserProfile()
+    if (res.code === 200 && res.data) {
+      Object.assign(user, res.data)
+      Object.assign(settingsForm, res.data)
+    }
+  } catch (error) {
+    console.error('Failed to fetch profile:', error)
+  }
+}
+
+onMounted(() => {
+  fetchProfile()
+})
 
 const editProfile = () => {
-  Object.assign(editForm, user);
-  editVisible.value = true;
-};
+  Object.assign(editForm, {
+    username: user.username,
+    avatar: user.avatar,
+    bio: user.bio,
+  })
+  editVisible.value = true
+}
 
-const saveProfile = () => {
-  Object.assign(user, editForm);
-  editVisible.value = false;
-  ElMessage.success('个人资料已更新');
-};
+const saveProfile = async () => {
+  if (!formRef.value) return
+
+  await formRef.value.validate(async (valid) => {
+    if (valid) {
+      saving.value = true
+      try {
+        const res = await updateUserProfile({
+          username: editForm.username,
+          bio: editForm.bio,
+        })
+        if (res.code === 200) {
+          ElMessage.success('个人资料已更新')
+          user.username = editForm.username
+          user.bio = editForm.bio
+          editVisible.value = false
+        }
+      } catch (error) {
+        console.error('Failed to update profile:', error)
+      } finally {
+        saving.value = false
+      }
+    }
+  })
+}
 
 const saveSettings = () => {
-  Object.assign(user, settingsForm);
-  ElMessage.success('设置已保存');
-};
+  Object.assign(user, settingsForm)
+  ElMessage.success('设置已保存')
+}
+
+const handleAvatarSuccess = (url: string) => {
+  user.avatar = url
+  editForm.avatar = url
+}
 
 const handleDelete = (id: number) => {
   ElMessageBox.confirm('确定要删除这篇文章吗？', '警告', {
-    type: 'warning'
+    type: 'warning',
   }).then(() => {
-    myArticles.value = myArticles.value.filter(a => a.id !== id);
-    ElMessage.success('文章已删除');
-  });
-};
+    myArticles.value = myArticles.value.filter((a) => a.id !== id)
+    ElMessage.success('文章已删除')
+  })
+}
 </script>
 
 <style scoped lang="scss">
-@use "../../styles/variables.scss" as *;
+@use '../../styles/variables.scss' as *;
 
 .profile-view {
   padding-bottom: $spacing-xl;
@@ -255,22 +359,24 @@ const handleDelete = (id: number) => {
   margin-top: $spacing-md;
 }
 
-.avatar-uploader {
-  .avatar-preview {
-    width: 100px;
-    height: 100px;
-    border-radius: 50%;
-    object-fit: cover;
+.edit-profile-content {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-lg;
+
+  .avatar-edit-section {
+    padding: $spacing-md 0;
+    border-bottom: 1px solid rgba($border-color, 0.5);
   }
-  .avatar-uploader-icon {
-    font-size: 28px;
-    color: #8c939d;
-    width: 100px;
-    height: 100px;
-    line-height: 100px;
-    text-align: center;
-    border: 1px dashed #d9d9d9;
-    border-radius: 50%;
+
+  .edit-form {
+    padding: 0 $spacing-sm;
   }
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: $spacing-md;
 }
 </style>

@@ -3,8 +3,7 @@
     <el-header class="header">
       <div class="header-content">
         <div class="logo" @click="$router.push('/')">
-          <el-icon class="logo-icon"><Cloudy /></el-icon>
-          <span class="logo-text">CloudLog</span>
+          <img src="/logo.png" alt="CloudLog" class="logo-img" />
         </div>
 
         <nav class="nav">
@@ -98,9 +97,9 @@ const userStore = useUserStore()
 
 const searchQuery = ref('')
 const isLoggedIn = computed(() => !!userStore.token)
-const isAdmin = computed(() => userStore.userInfo?.role === 'blogger')
+const isAdmin = computed(() => userStore.userInfo?.role === 'admin')
 const userAvatar = computed(
-  () => 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png',
+  () => userStore.userInfo?.avatar || 'http://127.0.0.1:9005/cloud-blog/default-avatar.png',
 )
 
 const handleSearch = () => {
@@ -157,18 +156,11 @@ const handleLogout = () => {
     display: flex;
     align-items: center;
     cursor: pointer;
-    margin-right: $spacing-xl;
+    margin-right: $spacing-md;
 
-    .logo-icon {
-      font-size: 24px;
-      color: $primary-color;
-      margin-right: $spacing-sm;
-    }
-
-    .logo-text {
-      font-size: 20px;
-      font-weight: 700;
-      color: $text-primary;
+    .logo-img {
+      height: 32px;
+      width: auto;
     }
   }
 

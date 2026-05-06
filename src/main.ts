@@ -3,6 +3,7 @@ import { createPinia } from 'pinia'
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
+import locale from 'element-plus/es/locale/lang/zh-cn'
 import 'md-editor-v3/lib/style.css'
 import './styles/index.scss'
 
@@ -17,6 +18,6 @@ for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
 
 app.use(createPinia())
 app.use(router)
-app.use(ElementPlus)
+app.use(ElementPlus, { locale })
 
 app.mount('#app')
