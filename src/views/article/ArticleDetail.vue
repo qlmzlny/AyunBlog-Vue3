@@ -36,6 +36,7 @@ import { MdPreview } from 'md-editor-v3'
 import 'md-editor-v3/lib/preview.css'
 import { useSEO } from '@/utils/seo'
 import { useArticleStore } from '@/stores/article'
+import { useUserStore } from '@/stores/user'
 import { storeToRefs } from 'pinia'
 
 // Components
@@ -49,10 +50,16 @@ const route = useRoute()
 const router = useRouter()
 const { updateMeta } = useSEO()
 const articleStore = useArticleStore()
+const userStore = useUserStore()
 const { currentArticle: article, loading } = storeToRefs(articleStore)
 
-const isAdmin = ref(true) // Should come from user store
-const canEdit = computed(() => isAdmin.value) // Simplified for now
+// 权限控制：管理员可编辑所有，普通用户只能编辑自己的文章
+const isAdmin = computed(() => userStore.userInfo?.role === 'admin')
+const canEdit = computed(() => {
+  if (!userStore.userInfo || !article.value) return false
+  if (isAdmin.value) return true
+  return article.value.author.id === userStore.userInfo.id
+})
 
 // Extract TOC items from markdown content
 const tocItems = computed(() => {
