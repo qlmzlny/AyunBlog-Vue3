@@ -6,6 +6,16 @@ export interface UserProfile {
   avatar: string
   bio: string
   email?: string
+  articlesCount: number
+  likesCount: number
+  followersCount: number
+}
+
+export interface EditUserProfile {
+  username: string
+  avatar: string
+  bio: string
+  email?: string
 }
 
 /**

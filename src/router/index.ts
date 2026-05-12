@@ -28,10 +28,10 @@ const router = createRouter({
           meta: { requiresAuth: true, title: '编辑器' },
         },
         {
-          path: 'categories',
-          name: 'Categories',
-          component: () => import('../views/category/CategoryView.vue'),
-          meta: { title: '分类与标签' },
+          path: 'publish-success',
+          name: 'PublishSuccess',
+          component: () => import('../views/article/PublishSuccess.vue'),
+          meta: { requiresAuth: true, title: '发布成功' },
         },
         {
           path: 'about',

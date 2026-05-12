@@ -4,7 +4,12 @@
       <el-col :xs="24" :md="8">
         <el-card class="profile-card" shadow="never">
           <div class="user-info">
-            <AvatarUpload v-model="user.avatar" :size="100" @success="handleAvatarSuccess" />
+            <AvatarUpload
+              :model-value="formatMinioUrl(user.avatar)"
+              @update:model-value="(val) => (user.avatar = val)"
+              :size="100"
+              @success="handleAvatarSuccess"
+            />
             <h2 class="username">{{ user.username }}</h2>
             <p class="email">{{ user.email }}</p>
             <p class="bio">{{ user.bio || '这个博主很懒，什么都没写~' }}</p>
@@ -91,7 +96,8 @@
         <!-- 顶部/侧边头像区 -->
         <div class="avatar-edit-section">
           <AvatarUpload
-            v-model="editForm.avatar"
+            :model-value="formatMinioUrl(editForm.avatar)"
+            @update:model-value="(val) => (editForm.avatar = val)"
             :size="100"
             show-btn
             @success="handleAvatarSuccess"
@@ -130,16 +136,28 @@
 </template>
 
 <script setup lang="ts">
+import { formatMinioUrl } from '@/config'
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance } from 'element-plus'
 import AvatarUpload from '@/components/AvatarUpload.vue'
-import { getUserProfile, updateUserProfile, type UserProfile } from '@/api/user'
+import {
+  getUserProfile,
+  updateUserProfile,
+  type UserProfile,
+  type EditUserProfile,
+} from '@/api/user'
+import { useUserStore } from '@/stores/user'
+
+const userStore = useUserStore()
 
 const user = reactive<UserProfile>({
   username: '',
   email: '',
   avatar: '',
   bio: '',
+  articlesCount: 0,
+  likesCount: 0,
+  followersCount: 0,
 })
 
 const activeTab = ref('articles')
@@ -180,7 +198,7 @@ const myArticles = ref([
   },
 ])
 
-const editForm = reactive<UserProfile>({
+const editForm = reactive<EditUserProfile>({
   username: '',
   avatar: '',
   bio: '',
@@ -228,6 +246,14 @@ const saveProfile = async () => {
           ElMessage.success('个人资料已更新')
           user.username = editForm.username
           user.bio = editForm.bio
+
+          if (userStore.userInfo) {
+            userStore.userInfo.username = editForm.username
+            userStore.userInfo.avatar = editForm.avatar
+
+            localStorage.setItem('userInfo', JSON.stringify(userStore.userInfo))
+          }
+
           editVisible.value = false
         }
       } catch (error) {
@@ -247,6 +273,11 @@ const saveSettings = () => {
 const handleAvatarSuccess = (url: string) => {
   user.avatar = url
   editForm.avatar = url
+
+  if (userStore.userInfo) {
+    userStore.userInfo.avatar = url
+    localStorage.setItem('userInfo', JSON.stringify(userStore.userInfo))
+  }
 }
 
 const handleDelete = (id: number) => {

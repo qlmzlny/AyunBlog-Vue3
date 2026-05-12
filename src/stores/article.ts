@@ -17,12 +17,13 @@ export const useArticleStore = defineStore('article', () => {
     categoryId: null as number | null,
     tags: [] as number[],
     excerpt: '',
-    status: 'published' as 'draft' | 'published' | 'scheduled',
+    status: 'draft' as 'draft' | 'published' | 'scheduled',
     publishTime: null as string | null,
   })
 
-  // 待上传的本地图片对象 (Blob URL -> File)
-  const localImages = ref<Map<string, File>>(new Map())
+  // 标记编辑器内容是否有未保存的更改
+  const isDirty = ref(false)
+
   // 封面图本地文件
   const localCover = ref<File | null>(null)
 
@@ -35,12 +36,14 @@ export const useArticleStore = defineStore('article', () => {
       const res = await getArticleDetail(id)
       if (res.code === 200) {
         currentArticle.value = res.data
+        return res.data
       }
     } catch (error) {
       console.error('Failed to fetch article detail:', error)
     } finally {
       loading.value = false
     }
+    return null
   }
 
   /**
@@ -48,17 +51,18 @@ export const useArticleStore = defineStore('article', () => {
    */
   const initEditArticle = (article: Article) => {
     editArticle.id = article.id
-    editArticle.title = article.title
-    editArticle.content = article.content
-    editArticle.cover = article.cover
-    editArticle.categoryId = article.category?.id || null
-    editArticle.tags = article.tags.map((t) => t.id)
-    editArticle.excerpt = article.excerpt
-    editArticle.status = 'published'
+    editArticle.title = article.title || ''
+    editArticle.content = article.content || ''
+    editArticle.cover = article.cover || null
+    editArticle.categoryId = article.category?.id || article.categoryId || null
+    editArticle.tags = article.tags?.map((t: any) => (typeof t === 'number' ? t : t.id)) || []
+    editArticle.excerpt = article.excerpt || ''
+    editArticle.status = (article.status as any) || 'draft'
+    editArticle.publishTime = article.publishTime || null
 
     // 清除之前的本地状态
-    localImages.value.clear()
     localCover.value = null
+    isDirty.value = false
   }
 
   /**
@@ -72,18 +76,11 @@ export const useArticleStore = defineStore('article', () => {
     editArticle.categoryId = null
     editArticle.tags = []
     editArticle.excerpt = ''
-    editArticle.status = 'published'
+    editArticle.status = 'draft'
     editArticle.publishTime = null
 
-    localImages.value.clear()
     localCover.value = null
-  }
-
-  /**
-   * 添加本地图片预览
-   */
-  const addLocalImage = (url: string, file: File) => {
-    localImages.value.set(url, file)
+    isDirty.value = false
   }
 
   /**
@@ -101,12 +98,11 @@ export const useArticleStore = defineStore('article', () => {
     currentArticle,
     loading,
     editArticle,
-    localImages,
+    isDirty,
     localCover,
     fetchArticleDetail,
     initEditArticle,
     resetEditArticle,
-    addLocalImage,
     setLocalCover,
     clearArticle,
   }

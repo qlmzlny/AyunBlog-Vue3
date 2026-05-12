@@ -9,7 +9,6 @@
         <nav class="nav">
           <el-menu mode="horizontal" :ellipsis="false" :router="true">
             <el-menu-item index="/">首页</el-menu-item>
-            <el-menu-item index="/categories">分类</el-menu-item>
             <el-menu-item index="/about">关于</el-menu-item>
           </el-menu>
         </nav>
@@ -61,7 +60,7 @@
       </div>
     </el-header>
 
-    <el-main class="main-content">
+    <main class="main-content">
       <div class="container">
         <router-view v-slot="{ Component }">
           <transition name="fade" mode="out-in">
@@ -69,7 +68,7 @@
           </transition>
         </router-view>
       </div>
-    </el-main>
+    </main>
 
     <el-footer class="footer">
       <div class="footer-content">
@@ -91,6 +90,7 @@ import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
+import { formatMinioUrl } from '@/config'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -98,8 +98,8 @@ const userStore = useUserStore()
 const searchQuery = ref('')
 const isLoggedIn = computed(() => !!userStore.token)
 const isAdmin = computed(() => userStore.userInfo?.role === 'admin')
-const userAvatar = computed(
-  () => userStore.userInfo?.avatar || 'http://127.0.0.1:9005/cloud-blog/default-avatar.png',
+const userAvatar = computed(() =>
+  formatMinioUrl(userStore.userInfo?.avatar || '/default-avatar.png'),
 )
 
 const handleSearch = () => {
@@ -144,7 +144,7 @@ const handleLogout = () => {
   align-items: center;
 
   .header-content {
-    max-width: 1200px;
+    max-width: 1440px;
     margin: 0 auto;
     width: 100%;
     display: flex;
@@ -195,9 +195,10 @@ const handleLogout = () => {
 .main-content {
   flex: 1;
   padding: $spacing-lg 0;
+  overflow: visible; // 确保不影响子元素的 sticky
 
   .container {
-    max-width: 1200px;
+    max-width: 1200px; // 增加最大宽度以容纳三栏布局
     margin: 0 auto;
     padding: 0 $spacing-md;
   }

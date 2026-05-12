@@ -116,6 +116,7 @@ import { getCategories, getTags } from '@/api/article'
 import type { Category, Tag } from '@/api/types/article'
 import { useArticleStore } from '@/stores/article'
 import { ElMessage } from 'element-plus'
+import { formatMinioUrl } from '@/config'
 
 const props = defineProps<{
   modelValue: boolean
@@ -141,7 +142,7 @@ const coverUrl = computed(() => {
   if (articleStore.localCover) {
     return URL.createObjectURL(articleStore.localCover)
   }
-  return form.cover
+  return formatMinioUrl(form.cover)
 })
 
 onMounted(async () => {

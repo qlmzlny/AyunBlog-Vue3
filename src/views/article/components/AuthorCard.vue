@@ -1,7 +1,7 @@
 <template>
   <el-card class="author-card" shadow="never">
     <div class="author-header">
-      <el-avatar :size="64" :src="author.avatar || defaultAvatar" />
+      <el-avatar :size="64" :src="formatMinioUrl(author.avatar || defaultAvatar)" />
       <div class="author-info-text">
         <h3 class="author-name">{{ author.username }}</h3>
         <p class="author-title">前端开发工程师 / 博主</p>
@@ -24,6 +24,7 @@
 
 <script setup lang="ts">
 import type { Author } from '@/api/types/article'
+import { formatMinioUrl } from '@/config'
 
 const props = defineProps<{
   author: Author
@@ -35,7 +36,7 @@ const props = defineProps<{
 console.log('作者信息：', props.author)
 console.log('统计信息：', props.stats)
 
-const defaultAvatar = 'http://127.0.0.1:9005/cloud-blog/default-avatar.png'
+const defaultAvatar = '/default-avatar.png'
 </script>
 
 <style scoped lang="scss">

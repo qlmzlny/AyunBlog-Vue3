@@ -13,7 +13,7 @@
     </div>
     <div class="comment-list">
       <div v-for="comment in comments" :key="comment.id" class="comment-item">
-        <el-avatar :size="40" :src="comment.avatar" />
+        <el-avatar :size="40" :src="formatMinioUrl(comment.avatar)" />
         <div class="comment-body">
           <div class="comment-header">
             <span class="comment-user">{{ comment.user }}</span>
@@ -29,6 +29,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { formatMinioUrl } from '@/config'
 
 const props = defineProps<{
   commentCount: number

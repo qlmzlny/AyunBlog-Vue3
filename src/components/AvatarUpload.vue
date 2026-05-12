@@ -32,6 +32,7 @@ import { ElMessage } from 'element-plus'
 import { Camera } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 import type { UploadRequestOptions } from 'element-plus'
+import { formatMinioUrl } from '@/config'
 
 const props = defineProps({
   modelValue: {
@@ -44,7 +45,7 @@ const props = defineProps({
   },
   defaultAvatar: {
     type: String,
-    default: 'http://127.0.0.1:9005/cloud-blog/default-avatar.png',
+    default: formatMinioUrl('/default-avatar.png'),
   },
   showBtn: {
     type: Boolean,
@@ -93,7 +94,7 @@ const handleUpload = async (options: UploadRequestOptions) => {
     })
 
     if (res.code === 200) {
-      const avatarUrl = res.data
+      const avatarUrl = formatMinioUrl(res.data)
       emit('update:modelValue', avatarUrl)
       emit('success', avatarUrl)
       ElMessage.success('头像上传成功')

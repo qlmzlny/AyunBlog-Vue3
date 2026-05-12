@@ -1,6 +1,51 @@
 import request from '@/utils/request'
 import type { Result } from './types/auth'
-import type { Article, ArticleListParams, ArticleListResponse, Category, Tag } from './types/article'
+import type {
+  Article,
+  ArticleListParams,
+  ArticleListResponse,
+  Category,
+  Tag,
+  DraftListParams,
+  PostVO,
+  PageResult,
+  HotArticle,
+} from './types/article'
+
+/**
+ * 获取热门文章
+ * @param params { limit: number }
+ */
+export function getHotArticles(params: { limit: number }) {
+  return request.get<any, Result<HotArticle[]>>('/articles/hot', {
+    params,
+  })
+}
+
+/**
+ * 获取草稿列表
+ * @param params 查询参数
+ */
+export function getDrafts(params: DraftListParams) {
+  return request.get<any, Result<PageResult<PostVO>>>('/articles/drafts', {
+    params,
+  })
+}
+
+/**
+ * 删除草稿
+ * @param id 草稿ID
+ */
+export function deleteDraft(id: number) {
+  return request.delete<any, Result<any>>(`/drafts/${id}`)
+}
+
+/**
+ * 清空草稿箱
+ */
+export function clearAllDrafts() {
+  return request.delete<any, Result<any>>('/drafts')
+}
 
 /**
  * 获取文章列表
@@ -8,7 +53,7 @@ import type { Article, ArticleListParams, ArticleListResponse, Category, Tag } f
  */
 export function getArticles(params?: ArticleListParams) {
   return request.get<any, Result<ArticleListResponse>>('/articles', {
-    params
+    params,
   })
 }
 
@@ -45,7 +90,7 @@ export function uploadArticleImage(file: File) {
   const formData = new FormData()
   formData.append('file', file)
   return request.post<any, Result<string>>('/upload/article-image', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' }
+    headers: { 'Content-Type': 'multipart/form-data' },
   })
 }
 
@@ -57,15 +102,8 @@ export function uploadCoverImage(file: File) {
   const formData = new FormData()
   formData.append('file', file)
   return request.post<any, Result<string>>('/upload/cover-image', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' }
+    headers: { 'Content-Type': 'multipart/form-data' },
   })
-}
-
-/**
- * 获取所有分类
- */
-export function getCategories() {
-  return request.get<any, Result<Category[]>>('/categories')
 }
 
 /**
